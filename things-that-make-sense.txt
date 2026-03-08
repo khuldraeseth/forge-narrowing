@@ -1,0 +1,67 @@
+sig A {}
+pred NeedsA[a: A] {}
+x, y: univ
+
+-- simplest, most understandable form
+x in A and NeedsA[x]
+
+-- short-circuit both ways?
+NeedsA[x] and x in A
+
+-- reduces to `implies` if we want that as the narrowing target
+not { x in A implies not NeedsA[x] }
+
+-- or to `or` if that's easier in a CNF world
+x not in A or not NeedsA[x]
+-- short-circuit when x not in A, guaranteeing x in A whevever we care about RHS
+
+---
+
+x in A implies NeedsA[x]
+-- equivalent to
+x not in A or NeedsA[x]
+-- equivalent to
+not { x in A and not NeedsA[x] }
+
+---
+
+x in A => NeedsA[x] else whatever
+-- equivalent to
+{ x in A and NeedsA[x] } or { x not in A and whatever }
+
+---
+
+{ x not in A implies false } and NeedsA[x]
+-- first example derivable; it makes sense for x's type to narrow
+-- actually perform narrowing here? slippery slope...
+{ x not in A implies FermatsLastTheoremHasACounterexample } and NeedsA[x]
+-- still makes sense to narrow x's type but difficult to prove
+-- either recognize specific syntactic patterns like (not) in
+-- or go all the way and run the solver to perform narrowing
+
+-- what would running the solver look like?
+{ x not in A implies Something } and NeedsA[x]
+-- this is just
+{ x in A or Something } and NeedsA[x]
+{ x in A and NeedsA[x] } or { Something and NeedsA[x] }
+-- we already understand the left side; focus on right
+Something and NeedsA[x]
+-- infer type A for x, then verify `Something is sufficient for x in A`
+-- this is the general form:
+x in A and NeedsA[x]
+-- we verify `x in A is sufficient for x in A` (it is)
+-- or the other way?
+-- infer type A from `x in A`, then verify `NeedsA[x] is sufficient for x in A`
+-- which it is because that annotation [a: A] can be considered conjunction with `x in A`, right?
+
+---
+
+-- another thing to consider: multiple variables
+pred Eats[eater: Eagle + Fox, eaten: Fish + Mouse] {}
+x in Mouse and y in Fox and Eats[y, x]
+-- infer Mouse for x and verify `y in Fox and Eats[y, x] is sufficient for x in Mouse`?
+-- no, because it's not... foxes also eat fish
+-- direction is meaningful even for the commutative `and`?
+--  makes sense - only one side fails to typecheck with `x: univ`
+-- infer Fish + Mouse for x and verify `x in Mouse and y in Fox is sufficient for x in Fish + Mouse`
+-- infer Eagle + Fox for y and verify `x in Mouse and y in Fox is sufficient for y in Eagle + Fox`
