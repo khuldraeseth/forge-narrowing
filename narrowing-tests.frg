@@ -8,6 +8,20 @@ pred NeedsB[b: B] {}
 pred NeedsAB[a: A, b: B] {}
 pred NeedsNotA[na: univ - A] {}
 
+-- option test_keep last SHOULD run all and report failures. it is not currently 
+--   working for `is forge-error` (which is only really used in our internal suites)
+
+-- This one type-checks???
+-- Expect SAT here if no pre-solver error, because NeedsNotA has no explicit 
+-- constraint enforcing its argument is in (univ-A). Forge's pre-solver checks
+-- aren't so strict as to disallow this. 
+types_univ_notA: assert { all x: univ |  x not in A and NeedsNotA[x] } is sat
+-- This, however, should be caught and isn't:
+// types_A_notA: assert { all x: A    |  NeedsNotA[x] } is forge_error
+-- Checking whether lack of error is due to set-subtraction in pred defn.
+-- This is caught. So set-subtraction in the pred defn may be the cause:
+types_univExceptA_A: assert { all x: univ-A    |  NeedsA[x] } is forge_error
+
 pred Foo {
     all x: univ {
         x in A and NeedsA[x]
